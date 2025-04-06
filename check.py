@@ -32,14 +32,14 @@ except Exception as e:
 
 
 completion = client.chat.completions.create(
-  model="openai/gpt-4o",
+  model="google/gemini-2.0-flash-thinking-exp:free",
   messages=[
     {
       "role": "user",
       "content": [
         {
           "type": "text",
-          "text": "What's in this image?"
+          "text": "Here's my screen. What am I doing? For time tracking purposes. Answer in one sentence."
         },
         {
           "type": "image_url",
