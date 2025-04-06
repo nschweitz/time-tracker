@@ -17,6 +17,7 @@ ALLOWED_CATEGORIES = {
     "Productive stuff in browser",
     "Spotify",
     "Watching stuff",
+    "Reading news",
     "Other",
 }
 # --- End Configuration ---
