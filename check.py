@@ -116,10 +116,10 @@ def capture_and_analyze():
         )
         result_text = completion.choices[0].message.content
         print(f"LLM Response: {result_text}")
-        return result_text
+        # This was the incorrect early return: return result_text
     except Exception as e:
         print(f"Error calling OpenAI API for description: {e}")
-        return None, None # Indicate failure
+        return None, None # Indicate failure, returning two values as expected by main
 
     # --- Second API Call: Categorization ---
     try:
