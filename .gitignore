@@ -1,2 +1,4 @@
 .aider*
 api_key.txt
+data/
+venv/
