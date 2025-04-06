@@ -10,6 +10,15 @@ from openai import OpenAI
 API_KEY_FILE = "api_key.txt"
 image_path = "/tmp/screen.jpg"
 output_dir = "data"
+ALLOWED_CATEGORIES = {
+    "Programming",
+    "Social media",
+    "Youtube",
+    "Productive stuff in browser",
+    "Spotify",
+    "Watching stuff",
+    "Other",
+}
 # --- End Configuration ---
 
 # --- Helper Functions ---
@@ -108,8 +117,47 @@ def capture_and_analyze():
         print(f"LLM Response: {result_text}")
         return result_text
     except Exception as e:
-        print(f"Error calling OpenAI API: {e}")
-        return None # Indicate failure
+        print(f"Error calling OpenAI API for description: {e}")
+        return None, None # Indicate failure
+
+    # --- Second API Call: Categorization ---
+    try:
+        print("Sending request to LLM for categorization...")
+        categorization_prompt = f"""Given the activity description: "{result_text}"
+
+Please categorize this activity into one of the following categories ONLY:
+{', '.join(ALLOWED_CATEGORIES)}
+
+Respond with ONLY the category name."""
+
+        completion = client.chat.completions.create(
+          model="google/gemini-2.0-flash-thinking-exp:free", # Or another suitable model
+          messages=[
+            {
+              "role": "user",
+              "content": categorization_prompt
+            }
+          ],
+          temperature=0.2, # Lower temperature for more deterministic category output
+        )
+        category_text = completion.choices[0].message.content.strip()
+
+        # Validate the category
+        if category_text in ALLOWED_CATEGORIES:
+            validated_category = category_text
+        else:
+            print(f"Warning: LLM returned invalid category '{category_text}'. Defaulting to 'Other'.")
+            validated_category = "Other"
+
+        print(f"LLM Category: {validated_category}")
+        return validated_category, result_text
+
+    except Exception as e:
+        print(f"Error calling OpenAI API for categorization: {e}")
+        # Decide how to handle categorization failure: default to Other or skip?
+        # Defaulting to Other here.
+        print("Defaulting category to 'Other' due to API error.")
+        return "Other", result_text
 
 
 def main(delay_seconds):
@@ -120,22 +168,23 @@ def main(delay_seconds):
 
     while True:
         print(f"\nStarting analysis cycle at {datetime.now().isoformat()}...")
-        analysis_result = capture_and_analyze()
+        category, description = capture_and_analyze()
 
-        if analysis_result:
+        if category and description: # Check if both were returned successfully
             # Generate timestamped filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = os.path.join(output_dir, f"{timestamp}.txt")
 
-            # Save the result
+            # Save the result (category on first line, description on second)
             try:
                 with open(output_filename, "w") as f:
-                    f.write(analysis_result)
+                    f.write(f"{category}\n")
+                    f.write(description)
                 print(f"Saved analysis to: {output_filename}")
             except IOError as e:
                 print(f"Error writing analysis to file {output_filename}: {e}")
         else:
-            print("Analysis failed, skipping save.")
+            print("Analysis or categorization failed, skipping save.")
 
         # Wait for the specified delay
         print(f"Waiting for {delay_seconds} seconds...")
