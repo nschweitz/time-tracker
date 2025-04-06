@@ -1,15 +1,21 @@
 import argparse
 import base64
+import argparse
+import base64
 import os
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, date # Added date
 from openai import OpenAI
+from chart import generate_chart, CATEGORY_COLORS # Import chart functions and colors
 
 # --- Configuration ---
 API_KEY_FILE = "api_key.txt"
-image_path = "/tmp/screen.jpg"
-output_dir = "data"
+image_path = "/tmp/screen.jpg" # Temporary screenshot file
+output_dir = "data" # Directory for saving analysis results
+chart_output_path = "/tmp/time.png" # Path for the generated chart
+chart_width = 1000
+chart_height = 22
 ALLOWED_CATEGORIES = {
     "Programming",
     "Social media",
@@ -182,10 +188,27 @@ def main(delay_seconds):
                     f.write(f"{category}\n")
                     f.write(description)
                 print(f"Saved analysis to: {output_filename}")
+
+                # --- Generate/Update the chart ---
+                try:
+                    today = date.today()
+                    generate_chart(
+                        data_dir=output_dir,
+                        output_path=chart_output_path,
+                        chart_width=chart_width,
+                        chart_height=chart_height,
+                        category_colors=CATEGORY_COLORS,
+                        target_date=today
+                    )
+                except Exception as chart_e:
+                    # Log chart generation errors but don't stop the main loop
+                    print(f"Error generating chart: {chart_e}")
+                # --- End chart generation ---
+
             except IOError as e:
                 print(f"Error writing analysis to file {output_filename}: {e}")
         else:
-            print("Analysis or categorization failed, skipping save.")
+            print("Analysis or categorization failed, skipping save and chart generation.")
 
         # Wait for the specified delay
         print(f"Waiting for {delay_seconds} seconds...")
