@@ -84,6 +84,11 @@ def generate_chart(
     # Filter points outside the chart's time range (just in case)
     data_points = [dp for dp in data_points if chart_start_dt <= dp[0] < chart_end_dt]
 
+    print(f"--- Chart Data Points ({len(data_points)}) ---")
+    for dt, cat in data_points:
+        print(f"  {dt.isoformat()} - {cat}")
+    print("--------------------------")
+
     # Create the image
     image = Image.new('RGB', (chart_width, chart_height), category_colors.get("Unknown", (211, 211, 211)))
     draw = ImageDraw.Draw(image)
@@ -101,10 +106,12 @@ def generate_chart(
         end_pixel = int((end_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
         color = category_colors.get("Unknown", (211, 211, 211)) # Color before first data point
         if end_pixel > start_pixel:
+            print(f"  Drawing initial block: Start={chart_start_dt.isoformat()}, End={end_dt.isoformat()}, Category=Unknown, Pixels=[{start_pixel}, {end_pixel}]")
             draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
         current_dt = end_dt # Move current time to the first event
 
     # Draw intervals based on data points
+    print("--- Drawing Intervals ---")
     for i, (event_dt, category) in enumerate(data_points):
         start_interval_dt = max(event_dt, current_dt) # Start from event time or last position
 
@@ -129,7 +136,11 @@ def generate_chart(
             color = category_colors.get(category, category_colors.get("Other")) # Use category color, fallback to Other
 
             if end_pixel > start_pixel: # Ensure width is positive
+                print(f"  Drawing interval: Start={start_interval_dt.isoformat()}, End={end_interval_dt.isoformat()}, Category={category}, Pixels=[{start_pixel}, {end_pixel}]")
                 draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
+            else:
+                 print(f"  Skipping zero/negative width interval: Start={start_interval_dt.isoformat()}, End={end_interval_dt.isoformat()}, Category={category}, Pixels=[{start_pixel}, {end_pixel}]")
+
 
         # Update current_dt for the next iteration (or the final fill)
         current_dt = end_interval_dt
@@ -144,7 +155,9 @@ def generate_chart(
          last_category = data_points[-1][1] if data_points else "Unknown"
          color = category_colors.get(last_category, category_colors.get("Other"))
          if end_pixel > start_pixel:
+             print(f"  Drawing final block: Start={current_dt.isoformat()}, End={chart_end_dt.isoformat()}, Category={last_category}, Pixels=[{start_pixel}, {end_pixel}]")
              draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
+    print("-----------------------")
 
 
     # Save the image
