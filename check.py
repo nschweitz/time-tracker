@@ -16,7 +16,7 @@ try:
 
     # Save to a buffer with specified quality
     buffer = io.BytesIO()
-    img.save(buffer, format="PNG", quality=90) # Assuming PNG, adjust if needed. Use optimize=True for potentially smaller files.
+    img.save(buffer, format="PNG", quality=90)
     buffer.seek(0)
 
     # Encode to base64
