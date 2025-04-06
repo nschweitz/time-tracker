@@ -6,15 +6,41 @@ import time
 from datetime import datetime
 from openai import OpenAI
 
-client = OpenAI(
-  base_url="https://openrouter.ai/api/v1",
-  api_key="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",
-)
-
-# Define image path (temporary file)
+# --- Configuration ---
+API_KEY_FILE = "api_key.txt"
 image_path = "/tmp/screen.jpg"
 output_dir = "data"
+# --- End Configuration ---
 
+# --- Helper Functions ---
+def load_api_key(filepath):
+    """Loads the API key from the specified file."""
+    try:
+        with open(filepath, 'r') as f:
+            key = f.read().strip()
+        if not key:
+            print(f"Error: API key file '{filepath}' is empty.")
+            exit(1)
+        return key
+    except FileNotFoundError:
+        print(f"Error: API key file '{filepath}' not found.")
+        print("Please create this file and place your OpenRouter API key in it.")
+        exit(1)
+    except Exception as e:
+        print(f"Error reading API key file '{filepath}': {e}")
+        exit(1)
+
+# --- Load API Key ---
+api_key = load_api_key(API_KEY_FILE)
+
+# --- Initialize OpenAI Client ---
+client = OpenAI(
+  base_url="https://openrouter.ai/api/v1",
+  api_key=api_key,
+)
+
+
+# --- Core Logic ---
 def capture_and_analyze():
     """Captures screenshot, sends to LLM, and returns the analysis."""
     # Capture the screenshot using grim
