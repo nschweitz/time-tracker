@@ -14,6 +14,7 @@ CATEGORY_COLORS = {
     "Other": (169, 169, 169),         # DarkGray
     "Unknown": (211, 211, 211),       # LightGray (for background/initial state)
 }
+MAX_VALIDITY_SECONDS = 90
 
 def read_data(data_dir: str, target_date: date) -> list[tuple[datetime, str]]:
     """Reads data files for the target date and returns sorted list of (timestamp, category)."""
@@ -95,70 +96,62 @@ def generate_chart(
 
     # Calculate seconds per pixel
     seconds_per_pixel = total_duration_seconds / chart_width
+    unknown_color = category_colors.get("Unknown", (211, 211, 211))
+
+    # Helper to draw a rectangle
+    def draw_segment(start_dt, end_dt, color, category_name):
+        if start_dt >= end_dt:
+            return # Skip zero or negative duration
+
+        start_pixel = int((start_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
+        end_pixel = int((end_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
+
+        # Clamp pixel values
+        start_pixel = max(0, start_pixel)
+        end_pixel = min(chart_width, end_pixel)
+
+        if end_pixel > start_pixel:
+            print(f"  Drawing segment: Start={start_dt.isoformat()}, End={end_dt.isoformat()}, Category={category_name}, Pixels=[{start_pixel}, {end_pixel}]")
+            draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
+        # else:
+        #     print(f"  Skipping zero-width segment: Start={start_dt.isoformat()}, End={end_dt.isoformat()}, Category={category_name}, Pixels=[{start_pixel}, {end_pixel}]")
+
 
     # --- Draw intervals ---
+    print("--- Drawing Intervals ---")
     current_dt = chart_start_dt
 
-    # Draw initial block from 7 AM to the first event (if any)
-    if data_points and data_points[0][0] > chart_start_dt:
-        end_dt = data_points[0][0]
-        start_pixel = 0 # Starts at the beginning
-        end_pixel = int((end_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
-        color = category_colors.get("Unknown", (211, 211, 211)) # Color before first data point
-        if end_pixel > start_pixel:
-            print(f"  Drawing initial block: Start={chart_start_dt.isoformat()}, End={end_dt.isoformat()}, Category=Unknown, Pixels=[{start_pixel}, {end_pixel}]")
-            draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
-        current_dt = end_dt # Move current time to the first event
-
-    # Draw intervals based on data points
-    print("--- Drawing Intervals ---")
     for i, (event_dt, category) in enumerate(data_points):
-        start_interval_dt = max(event_dt, current_dt) # Start from event time or last position
+        # Ensure event is within chart bounds (already filtered, but good practice)
+        event_dt = max(event_dt, chart_start_dt)
+        event_dt = min(event_dt, chart_end_dt)
 
-        # Determine end time: next event or chart end
-        if i + 1 < len(data_points):
-            end_interval_dt = min(data_points[i+1][0], chart_end_dt)
-        else:
-            end_interval_dt = chart_end_dt
+        # 1. Draw "Unknown" gap before this event
+        if event_dt > current_dt:
+            draw_segment(current_dt, event_dt, unknown_color, "Unknown (Gap)")
+            current_dt = event_dt # Move pointer to start of event
 
-        # Ensure we don't draw past the chart end time
-        end_interval_dt = min(end_interval_dt, chart_end_dt)
+        # 2. Determine the end of this event's colored block
+        max_valid_end_dt = event_dt + timedelta(seconds=MAX_VALIDITY_SECONDS)
+        next_event_start_dt = data_points[i+1][0] if i + 1 < len(data_points) else chart_end_dt
+        colored_block_end_dt = min(max_valid_end_dt, next_event_start_dt, chart_end_dt)
 
-        if start_interval_dt < end_interval_dt: # Only draw if interval has positive duration
-            # Calculate pixel positions
-            start_pixel = int((start_interval_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
-            end_pixel = int((end_interval_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
+        # 3. Draw the actual category block
+        color = category_colors.get(category, category_colors.get("Other"))
+        draw_segment(current_dt, colored_block_end_dt, color, category)
 
-            # Clamp pixel values to chart bounds
-            start_pixel = max(0, start_pixel)
-            end_pixel = min(chart_width, end_pixel)
+        # 4. Update current_dt
+        current_dt = colored_block_end_dt
 
-            color = category_colors.get(category, category_colors.get("Other")) # Use category color, fallback to Other
-
-            if end_pixel > start_pixel: # Ensure width is positive
-                print(f"  Drawing interval: Start={start_interval_dt.isoformat()}, End={end_interval_dt.isoformat()}, Category={category}, Pixels=[{start_pixel}, {end_pixel}]")
-                draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
-            else:
-                 print(f"  Skipping zero/negative width interval: Start={start_interval_dt.isoformat()}, End={end_interval_dt.isoformat()}, Category={category}, Pixels=[{start_pixel}, {end_pixel}]")
-
-
-        # Update current_dt for the next iteration (or the final fill)
-        current_dt = end_interval_dt
+        # Check if we've reached the end
         if current_dt >= chart_end_dt:
-             break # Stop if we've reached the end of the chart
+            break
 
-    # Fill any remaining time at the end with the last known category (if needed)
-    # This part might be redundant due to the loop structure, but kept for clarity
+    # Fill any remaining time at the end with "Unknown"
     if current_dt < chart_end_dt:
-         start_pixel = int((current_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
-         end_pixel = chart_width
-         last_category = data_points[-1][1] if data_points else "Unknown"
-         color = category_colors.get(last_category, category_colors.get("Other"))
-         if end_pixel > start_pixel:
-             print(f"  Drawing final block: Start={current_dt.isoformat()}, End={chart_end_dt.isoformat()}, Category={last_category}, Pixels=[{start_pixel}, {end_pixel}]")
-             draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
-    print("-----------------------")
+        draw_segment(current_dt, chart_end_dt, unknown_color, "Unknown (End Gap)")
 
+    print("-----------------------")
 
     # Save the image
     try:
