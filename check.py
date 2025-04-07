@@ -29,9 +29,13 @@ is_running = True # Start in the running state
 def handle_sigusr1(signum, frame):
     """Toggles the running state when SIGUSR1 is received."""
     global is_running
+    previous_state = is_running
     is_running = not is_running
     status = "ENABLED" if is_running else "DISABLED"
     print(f"\nSIGUSR1 received. Analysis toggled to: {status}\n")
+    # Regenerate chart immediately if state changed, to reflect pause/resume visually
+    if is_running != previous_state:
+        update_chart()
 # --- End Signal Handler ---
 
 
@@ -183,6 +187,27 @@ Respond with ONLY the category name (e.g., "Programming", "Social media")."""
         exit(1) # Exit immediately
 
 
+# --- Chart Update Function ---
+def update_chart():
+    """Generates or updates the chart based on current data and state."""
+    print("Attempting to update chart...")
+    try:
+        today = date.today()
+        generate_chart(
+            data_dir=output_dir,
+            output_path=chart_output_path,
+            chart_width=chart_width,
+            chart_height=chart_height,
+            category_colors=CATEGORY_COLORS,
+            target_date=today,
+            is_active=is_running # Pass the current running state
+        )
+    except Exception as chart_e:
+        # Log chart generation errors but don't stop the main loop
+        print(f"Error generating chart: {chart_e}")
+# --- End Chart Update Function ---
+
+
 def main(delay_seconds):
     """Main loop to capture, analyze, save, and wait."""
     # Ensure output directory exists
@@ -228,21 +253,9 @@ def main(delay_seconds):
             print("State is PAUSED, skipping analysis.")
 
 
-        # --- Generate/Update the chart (always run to show current state) ---
-        try:
-            today = date.today()
-            generate_chart(
-                data_dir=output_dir,
-                output_path=chart_output_path,
-                chart_width=chart_width,
-                chart_height=chart_height,
-                category_colors=CATEGORY_COLORS,
-                target_date=today,
-                is_active=is_running # Pass the current running state
-            )
-        except Exception as chart_e:
-            # Log chart generation errors but don't stop the main loop
-            print(f"Error generating chart: {chart_e}")
+        # --- Generate/Update the chart ---
+        # Called at the end of each cycle AND by the signal handler for immediate updates
+        update_chart()
         # --- End chart generation ---
 
 
