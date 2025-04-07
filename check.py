@@ -58,14 +58,14 @@ def capture_and_analyze():
         print("Screenshot captured successfully.")
     except FileNotFoundError:
         print("Error: 'grim' command not found. Please ensure it is installed and in your PATH.")
-        return None # Indicate failure
+        exit(1) # Exit immediately
     except subprocess.CalledProcessError as e:
         print(f"Error running grim: {e}")
         print(f"Stderr: {e.stderr}")
-        return None # Indicate failure
+        exit(1) # Exit immediately
     except Exception as e:
         print(f"An unexpected error occurred during screenshot capture: {e}")
-        return None # Indicate failure
+        exit(1) # Exit immediately
 
     # Read the image file and encode it in base64
     try:
@@ -75,12 +75,12 @@ def capture_and_analyze():
         image_data_url = f"data:image/jpeg;base64,{base64_image}"
     except FileNotFoundError:
         print(f"Error: Screenshot file not found at {image_path} after capture attempt.")
-        return None # Indicate failure
+        exit(1) # Exit immediately
     except Exception as e:
         print(f"Error processing image: {e}")
-        return None # Indicate failure
+        exit(1) # Exit immediately
     finally:
-        # Clean up the temporary screenshot file
+        # Clean up the temporary screenshot file (will run even if exit() was called in except)
         try:
             os.remove(image_path)
             print(f"Removed temporary file: {image_path}")
@@ -116,7 +116,7 @@ def capture_and_analyze():
         # This was the incorrect early return: return result_text
     except Exception as e:
         print(f"Error calling OpenAI API for description: {e}")
-        return None, None # Indicate failure, returning two values as expected by main
+        exit(1) # Exit immediately
 
     # --- Second API Call: Categorization ---
     try:
@@ -164,10 +164,7 @@ Respond with ONLY the category name (e.g., "Programming", "Social media")."""
 
     except Exception as e:
         print(f"Error calling OpenAI API for categorization: {e}")
-        # Decide how to handle categorization failure: default to Other or skip?
-        # Defaulting to Other here.
-        print("Defaulting category to 'Other' due to API error.")
-        return "Other", result_text
+        exit(1) # Exit immediately
 
 
 def main(delay_seconds):
