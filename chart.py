@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw
 # Define colors and descriptions for each category
 # Format: "Category Name": ( (R, G, B), "Description for LLM" )
 CATEGORY_COLORS = {
-    "Programming":              ( (255, 0, 255), "Writing code, reading docs online, talking to chatbot about programming, leetcode in browser, reading papers"),
+    "Work":              ( (0, 255, 255), "Writing code, reading docs online, talking to chatbot about programming, leetcode in browser, reading papers, working on CV, job applications, preparing for interview"),
     "Entertainment":            ( (127, 127, 127),  "Reddit, Hacker News, Nate Silver, Lemmy, XKCD, YouTube, Spotify" ),
     "Watching stuff":           ( (255, 255, 255),  "Watching videos (not Youtube), movies, TV shows" ),
     "Reading news":             ( (255, 127, 0), "'Real' newspapers like the Economist or WSJ or SZ. Hacker News does NOT count." ),
