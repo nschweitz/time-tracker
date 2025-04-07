@@ -16,16 +16,7 @@ output_dir = "data" # Directory for saving analysis results
 chart_output_path = "/tmp/time.png" # Path for the generated chart
 chart_width = 1000
 chart_height = 22
-ALLOWED_CATEGORIES = {
-    "Programming",
-    "Social media",
-    "Youtube",
-    "Productive stuff in browser",
-    "Spotify",
-    "Watching stuff",
-    "Reading news",
-    "Other",
-}
+# Allowed categories are now derived from chart.CATEGORY_COLORS.keys()
 # --- End Configuration ---
 
 # --- Helper Functions ---
@@ -130,10 +121,15 @@ def capture_and_analyze():
     # --- Second API Call: Categorization ---
     try:
         print("Sending request to LLM for categorization...")
+        allowed_category_names = list(CATEGORY_COLORS.keys())
+        # Ensure "Unknown" is not presented as an option to the LLM
+        if "Unknown" in allowed_category_names:
+            allowed_category_names.remove("Unknown")
+
         categorization_prompt = f"""Given the activity description: "{result_text}"
 
 Please categorize this activity into one of the following categories ONLY:
-{', '.join(ALLOWED_CATEGORIES)}
+{', '.join(allowed_category_names)}
 
 Respond with ONLY the category name."""
 
@@ -149,8 +145,12 @@ Respond with ONLY the category name."""
         )
         category_text = completion.choices[0].message.content.strip()
 
-        # Validate the category
-        if category_text in ALLOWED_CATEGORIES:
+        # Validate the category against the defined colors (excluding "Unknown" as a valid LLM output)
+        valid_categories_for_llm = set(CATEGORY_COLORS.keys())
+        if "Unknown" in valid_categories_for_llm:
+             valid_categories_for_llm.remove("Unknown")
+
+        if category_text in valid_categories_for_llm:
             validated_category = category_text
         else:
             print(f"Warning: LLM returned invalid category '{category_text}'. Defaulting to 'Other'.")
