@@ -41,11 +41,20 @@ see the tool was disabled for most of the day, mostly because it hadn't been
 written yet ;-)
 
 ### Why is it so hideous?
-So it fits in my bar.
+So it fits at the top of my screen
 
 ![full screenshot](https://github.com/nschweitz/time-tracker/blob/b2522936be4eaefb1d05185b107e65107d175bde/bar.png)
 
 ## Pause and unpause
+Presumably you're not glued to your monitor 17 hours a day. Send SIGUSR1 to
+pause/unpause tracking:
+
+```
+pkill -f check.py -SIGUSR1
+```
+
+The chart gets underlined in yellow whenever tracking is paused. I have it
+bound to a hotkey and it works nicely.
 
 ## Setting categories
 It's hardcoded (sorry) in chart.py:
