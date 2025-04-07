@@ -157,6 +157,38 @@ def generate_chart(
 
     print("-----------------------")
 
+    # --- Draw Hour Ticks ---
+    print("--- Drawing Hour Ticks ---")
+    tick_color = (255, 255, 255) # White
+    start_hour = chart_start_dt.hour # Should be 7
+    end_hour = chart_end_dt.hour   # Should be 0 (midnight)
+
+    # Iterate from the first hour (7 AM) up to the hour before midnight (23:00 or 11 PM)
+    for hour in range(start_hour, 24): # 7 through 23
+        tick_dt = datetime.combine(target_date, time(hour, 0), tzinfo=local_tz)
+
+        # Calculate pixel position for the hour tick
+        if tick_dt >= chart_start_dt and tick_dt < chart_end_dt:
+            time_offset_seconds = (tick_dt - chart_start_dt).total_seconds()
+            tick_x = int(time_offset_seconds / seconds_per_pixel)
+
+            # Determine tick width
+            if hour == 9 or hour == 17: # 9 AM or 5 PM
+                tick_width = 3
+                # Adjust x for wider lines to center them (optional, but looks better)
+                # For a 3px line, draw from x-1 to x+1. draw.line handles width.
+                # We might need to draw a rectangle for >1px width if draw.line width param isn't reliable
+                print(f"  Drawing wide tick at {hour}:00 (x={tick_x})")
+                # Use draw.line with width parameter
+                draw.line([(tick_x, 0), (tick_x, chart_height)], fill=tick_color, width=tick_width)
+            else:
+                tick_width = 1
+                print(f"  Drawing tick at {hour}:00 (x={tick_x})")
+                draw.line([(tick_x, 0), (tick_x, chart_height)], fill=tick_color, width=tick_width)
+
+    print("------------------------")
+
+
     # Save the image
     try:
         image.save(output_path)
