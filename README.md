@@ -40,6 +40,13 @@ at that time. Light blue is work, orange is youtube & co, and so on. As you can
 see the tool was disabled for most of the day, mostly because it hadn't been
 written yet ;-)
 
+### Why is it so hideous?
+So it fits in my bar.
+
+![full screenshot]()
+
+## Pause and unpause
+
 ## Setting categories
 It's hardcoded (sorry) in chart.py:
 ```
