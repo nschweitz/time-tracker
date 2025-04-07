@@ -256,9 +256,6 @@ def main(delay_seconds):
             time.sleep(1)
 
 
-if __name__ == "__main__":
-            output_filename = os.path.join(output_dir, f"{timestamp}.txt")
-
 # Note: The main loop structure was significantly changed in the previous block.
 # This block is just to ensure the __main__ part remains correct.
 if __name__ == "__main__":
