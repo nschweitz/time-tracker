@@ -12,8 +12,10 @@ CATEGORY_COLORS = {
     "Other":                    ( (255, 0, 255), "Anything else" ),
     # Internal category, not shown to LLM
     "Unknown":                  ( (0, 0, 0), "N/A" ),
+    # Backend failed
+    "Fail":                     ( (0, 255, 0), "N/A" ),
 }
-MAX_VALIDITY_SECONDS = 40
+MAX_VALIDITY_SECONDS = 70
 
 def read_data(data_dir: str, target_date: date) -> list[tuple[datetime, str]]:
     """Reads data files for the target date and returns sorted list of (timestamp, category)."""

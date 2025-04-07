@@ -11,6 +11,7 @@ from chart import generate_chart, CATEGORY_COLORS # Import chart functions and c
 
 # --- Configuration ---
 API_KEY_FILE = "api_key.txt"
+AI_MODEL = "google/gemini-flash-1.5-8b"
 image_path = "/tmp/screen.jpg" # Temporary screenshot file
 output_dir = "data" # Directory for saving analysis results
 chart_output_path = "/tmp/time.png" # Path for the generated chart
@@ -89,34 +90,34 @@ def capture_and_analyze():
 
 
     # Call the LLM API
-    try:
-        print("Sending request to LLM...")
-        completion = client.chat.completions.create(
-          model="google/gemini-2.0-flash-thinking-exp:free",
-          messages=[
+    print("Sending request to LLM...")
+    completion = client.chat.completions.create(
+      model=AI_MODEL,
+      messages=[
+        {
+          "role": "user",
+          "content": [
             {
-              "role": "user",
-              "content": [
-                {
-                  "type": "text",
-                  "text": "Here's my screen. What am I doing? For time tracking purposes. Answer in one sentence."
-                },
-                {
-                  "type": "image_url",
-                  "image_url": {
-                    "url": image_data_url
-                  }
-                }
-              ]
+              "type": "text",
+              "text": "Here's my screen. What am I doing? For time tracking purposes. Answer in one sentence."
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": image_data_url
+              }
             }
-          ],
-        )
-        result_text = completion.choices[0].message.content
-        print(f"LLM Response: {result_text}")
-        # This was the incorrect early return: return result_text
-    except Exception as e:
-        print(f"Error calling OpenAI API for description: {e}")
-        exit(1) # Exit immediately
+          ]
+        }
+      ],
+    )
+    if completion.choices == None:
+        print("Backend failed:")
+        print(completion)
+        return "Fail", "Backend failed"
+    result_text = completion.choices[0].message.content
+    print(f"LLM Response: {result_text}")
+    # This was the incorrect early return: return result_text
 
     # --- Second API Call: Categorization ---
     try:
@@ -137,7 +138,7 @@ Please categorize this activity into ONE of the following categories based on th
 Respond with ONLY the category name (e.g., "Programming", "Social media")."""
 
         completion = client.chat.completions.create(
-          model="google/gemini-2.0-flash-thinking-exp:free", # Or another suitable model
+          model=AI_MODEL,
           messages=[
             {
               "role": "user",
