@@ -43,7 +43,7 @@ written yet ;-)
 ### Why is it so hideous?
 So it fits in my bar.
 
-![full screenshot]()
+![full screenshot](https://github.com/nschweitz/time-tracker/blob/b2522936be4eaefb1d05185b107e65107d175bde/bar.png)
 
 ## Pause and unpause
 
