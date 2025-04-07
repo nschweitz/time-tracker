@@ -5,18 +5,15 @@ from PIL import Image, ImageDraw
 # Define colors and descriptions for each category
 # Format: "Category Name": ( (R, G, B), "Description for LLM" )
 CATEGORY_COLORS = {
-    "Programming":              ( (30, 144, 255), "Writing code, debugging, using IDEs, terminal tasks related to coding." ),
-    "Social media":             ( (255, 165, 0),  "Browsing Reddit, forums (e.g., guitar, Blind), Hacker News, etc." ),
-    "Youtube":                  ( (255, 0, 0),    "Watching videos on Youtube." ),
-    "Productive browser":       ( (60, 179, 113), "Reading technical documentation, research papers, LeetCode, Stack Overflow, work-related web apps." ),
-    "Spotify":                  ( (30, 215, 96),  "Listening to music or podcasts on Spotify." ),
-    "Watching stuff":           ( (128, 0, 128),  "Watching videos (not Youtube), movies, TV shows (e.g., Plex, Netflix)." ),
-    "Reading news":             ( (210, 105, 30), "Reading news websites or aggregators." ),
-    "Other":                    ( (169, 169, 169),"Anything that doesn't fit well into other categories (e.g., file browsing, system settings)." ),
+    "Programming":              ( (255, 0, 255), "Writing code, reading docs online, talking to chatbot about programming, leetcode in browser, reading papers"),
+    "Entertainment":            ( (127, 127, 127),  "Reddit, Hacker News, Nate Silver, Lemmy, XKCD, YouTube, Spotify" ),
+    "Watching stuff":           ( (255, 255, 255),  "Watching videos (not Youtube), movies, TV shows" ),
+    "Reading news":             ( (255, 127, 0), "'Real' newspapers like the Economist or WSJ or SZ. Hacker News does NOT count." ),
+    "Other":                    ( (255, 0, 255), "Anything else" ),
     # Internal category, not shown to LLM
-    "Unknown":                  ( (211, 211, 211),"Time before first data point or gaps between activities." ),
+    "Unknown":                  ( (0, 0, 0), "N/A" ),
 }
-MAX_VALIDITY_SECONDS = 90
+MAX_VALIDITY_SECONDS = 40
 
 def read_data(data_dir: str, target_date: date) -> list[tuple[datetime, str]]:
     """Reads data files for the target date and returns sorted list of (timestamp, category)."""
