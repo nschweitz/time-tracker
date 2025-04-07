@@ -21,6 +21,20 @@ chart_height = 22
 # Allowed categories are now derived from chart.CATEGORY_COLORS.keys()
 # --- End Configuration ---
 
+# --- Global State for Signal Handling ---
+is_running = True # Start in the running state
+# --- End Global State ---
+
+# --- Signal Handler ---
+def handle_sigusr1(signum, frame):
+    """Toggles the running state when SIGUSR1 is received."""
+    global is_running
+    is_running = not is_running
+    status = "ENABLED" if is_running else "DISABLED"
+    print(f"\nSIGUSR1 received. Analysis toggled to: {status}\n")
+# --- End Signal Handler ---
+
+
 # --- Helper Functions ---
 def load_api_key(filepath):
     """Loads the API key from the specified file."""
