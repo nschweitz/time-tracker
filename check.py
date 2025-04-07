@@ -3,11 +3,12 @@ import base64
 import argparse
 import base64
 import os
+import signal # Import signal module
 import subprocess
 import time
-from datetime import datetime, date # Added date
+from datetime import datetime, date
 from openai import OpenAI
-from chart import generate_chart, CATEGORY_COLORS # Import chart functions and colors
+from chart import generate_chart, CATEGORY_COLORS
 
 # --- Configuration ---
 API_KEY_FILE = "api_key.txt"
@@ -174,48 +175,78 @@ def main(delay_seconds):
     os.makedirs(output_dir, exist_ok=True)
     print(f"Ensured output directory exists: {output_dir}")
 
+    # Register the signal handler
+    signal.signal(signal.SIGUSR1, handle_sigusr1)
+    print(f"Process ID: {os.getpid()}. Send SIGUSR1 to toggle analysis.")
+    print(f"Initial state: {'ENABLED' if is_running else 'DISABLED'}")
+
+
     while True:
-        print(f"\nStarting analysis cycle at {datetime.now().isoformat()}...")
-        category, description = capture_and_analyze()
+        print(f"\nCycle start at {datetime.now().isoformat()}. State: {'RUNNING' if is_running else 'PAUSED'}")
 
-        if category and description: # Check if both were returned successfully
-            # Generate timestamped filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_filename = os.path.join(output_dir, f"{timestamp}.txt")
+        category = None
+        description = None
 
-            # Save the result (category on first line, description on second)
-            try:
-                with open(output_filename, "w") as f:
-                    f.write(f"{category}\n")
-                    f.write(description)
-                print(f"Saved analysis to: {output_filename}")
+        if is_running:
+            print("State is RUNNING, performing analysis...")
+            category, description = capture_and_analyze()
 
-                # --- Generate/Update the chart ---
+            if category and description: # Check if analysis was successful
+                # Generate timestamped filename
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_filename = os.path.join(output_dir, f"{timestamp}.txt")
+
+                # Save the result (category on first line, description on second)
                 try:
-                    today = date.today()
-                    generate_chart(
-                        data_dir=output_dir,
-                        output_path=chart_output_path,
-                        chart_width=chart_width,
-                        chart_height=chart_height,
-                        category_colors=CATEGORY_COLORS,
-                        target_date=today
-                    )
-                except Exception as chart_e:
-                    # Log chart generation errors but don't stop the main loop
-                    print(f"Error generating chart: {chart_e}")
-                # --- End chart generation ---
-
-            except IOError as e:
-                print(f"Error writing analysis to file {output_filename}: {e}")
+                    with open(output_filename, "w") as f:
+                        f.write(f"{category}\n")
+                        f.write(description)
+                    print(f"Saved analysis to: {output_filename}")
+                except IOError as e:
+                    print(f"Error writing analysis to file {output_filename}: {e}")
+                    # Decide if we should exit or continue if saving fails
+                    # For now, continue to chart generation
+            else:
+                # capture_and_analyze might have exited due to errors, or returned None/None
+                print("Analysis failed or was skipped, not saving data.")
+                # We still proceed to chart generation below
         else:
-            print("Analysis or categorization failed, skipping save and chart generation.")
+            print("State is PAUSED, skipping analysis.")
+
+
+        # --- Generate/Update the chart (always run to show current state) ---
+        try:
+            today = date.today()
+            generate_chart(
+                data_dir=output_dir,
+                output_path=chart_output_path,
+                chart_width=chart_width,
+                chart_height=chart_height,
+                category_colors=CATEGORY_COLORS,
+                target_date=today,
+                is_active=is_running # Pass the current running state
+            )
+        except Exception as chart_e:
+            # Log chart generation errors but don't stop the main loop
+            print(f"Error generating chart: {chart_e}")
+        # --- End chart generation ---
+
 
         # Wait for the specified delay
         print(f"Waiting for {delay_seconds} seconds...")
-        time.sleep(delay_seconds)
+        # Use a loop for sleep to make it interruptible by signals more quickly
+        # Although signal handlers usually interrupt sleep anyway, this is more robust
+        for _ in range(delay_seconds):
+            if not is_running and _ > 0: # If paused, check state change immediately after signal
+                 pass # No need to sleep full second if state changed
+            time.sleep(1)
 
 
+if __name__ == "__main__":
+            output_filename = os.path.join(output_dir, f"{timestamp}.txt")
+
+# Note: The main loop structure was significantly changed in the previous block.
+# This block is just to ensure the __main__ part remains correct.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Periodically capture screen and analyze activity.")
     parser.add_argument("delay", type=int, help="Delay between captures in seconds.")

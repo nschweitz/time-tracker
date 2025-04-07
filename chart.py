@@ -64,10 +64,11 @@ def generate_chart(
     chart_width: int,
     chart_height: int,
     category_colors: dict,
-    target_date: date
+    target_date: date,
+    is_active: bool # Add parameter to indicate if analysis is active
 ):
     """Generates the timeline chart image for the target date."""
-    print(f"Generating chart for {target_date.isoformat()}...")
+    print(f"Generating chart for {target_date.isoformat()} (Active: {is_active})...")
 
     # Define the time range for the chart (7 AM to midnight)
     # Ensure we use timezone-aware datetimes consistent with data reading
@@ -190,6 +191,16 @@ def generate_chart(
 
     print("------------------------")
 
+    # --- Draw Paused Indicator (if needed) ---
+    if not is_active:
+        print("--- Drawing Paused Indicator ---")
+        pause_color = (255, 255, 0) # Yellow
+        # Draw a 1px line at the very bottom
+        bottom_y = chart_height - 1
+        draw.line([(0, bottom_y), (chart_width -1, bottom_y)], fill=pause_color, width=1)
+        print(f"  Drew yellow line at y={bottom_y}")
+        print("-----------------------------")
+
 
     # Save the image
     try:
@@ -212,5 +223,6 @@ if __name__ == '__main__':
     os.makedirs(data_dir, exist_ok=True)
     # You might want to create dummy data files in 'data/' for testing
 
-    generate_chart(data_dir, output_file, chart_w, chart_h, CATEGORY_COLORS, today)
+    # Example usage needs to pass the is_active flag now
+    generate_chart(data_dir, output_file, chart_w, chart_h, CATEGORY_COLORS, today, is_active=True) # Example: assume active
     print("Chart generation test finished.")
