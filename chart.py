@@ -5,9 +5,9 @@ from PIL import Image, ImageDraw
 # Define colors and descriptions for each category
 # Format: "Category Name": ( (R, G, B), "Description for LLM" )
 CATEGORY_COLORS = {
-    "Work":              ( (0, 255, 255), "Writing code, reading docs online, talking to chatbot about programming, leetcode in browser, reading papers, working on CV, job applications, preparing for interview"),
-    "Entertainment":            ( (127, 127, 127),  "Reddit, Hacker News, Nate Silver, Lemmy, XKCD, YouTube, Spotify" ),
-    "Watching stuff":           ( (255, 255, 255),  "Watching videos (not Youtube), movies, TV shows" ),
+    "Work":                     ( (0, 255, 255), "Writing code, reading docs online, talking to chatbot about programming, leetcode in browser, reading papers, working on CV, job applications, preparing for interview, emails"),
+    "Entertainment":            ( (127, 127, 127),  "Reddit, Hacker News, Nate Silver, Lemmy, XKCD, Spotify" ),
+    "Watching stuff":           ( (255, 255, 255),  "Youtube, movies, TV shows" ),
     "Reading news":             ( (255, 127, 0), "'Real' newspapers like the Economist or WSJ or SZ. Hacker News does NOT count." ),
     "Other":                    ( (255, 0, 255), "Anything else" ),
     # Internal category, not shown to LLM
@@ -216,7 +216,7 @@ if __name__ == '__main__':
     data_dir = os.path.join(script_dir, 'data')
     output_file = '/tmp/time.png'
     chart_w = 1000
-    chart_h = 22
+    chart_h = 44
     today = date.today()
 
     # Ensure data directory exists for testing

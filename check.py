@@ -17,7 +17,7 @@ image_path = "/tmp/screen.jpg" # Temporary screenshot file
 output_dir = "data" # Directory for saving analysis results
 chart_output_path = "/tmp/time.png" # Path for the generated chart
 chart_width = 1000
-chart_height = 22
+chart_height = 44
 # Allowed categories are now derived from chart.CATEGORY_COLORS.keys()
 # --- End Configuration ---
 
@@ -183,8 +183,9 @@ Respond with ONLY the category name (e.g., "Programming", "Social media")."""
         return validated_category, result_text
 
     except Exception as e:
-        print(f"Error calling OpenAI API for categorization: {e}")
-        exit(1) # Exit immediately
+        print("Backend failed:")
+        print(completion)
+        return "Fail", "Backend failed"
 
 
 # --- Chart Update Function ---
