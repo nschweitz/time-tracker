@@ -123,15 +123,18 @@ def capture_and_analyze():
         print("Sending request to LLM for categorization...")
         allowed_category_names = list(CATEGORY_COLORS.keys())
         # Ensure "Unknown" is not presented as an option to the LLM
-        if "Unknown" in allowed_category_names:
-            allowed_category_names.remove("Unknown")
+        # Build the category list with descriptions for the prompt
+        prompt_category_list = []
+        for name, (color, description) in CATEGORY_COLORS.items():
+            if name != "Unknown": # Don't include Unknown as an option for the LLM
+                prompt_category_list.append(f"- {name}: {description}")
 
         categorization_prompt = f"""Given the activity description: "{result_text}"
 
-Please categorize this activity into one of the following categories ONLY:
-{', '.join(allowed_category_names)}
+Please categorize this activity into ONE of the following categories based on their descriptions:
+{chr(10).join(prompt_category_list)}
 
-Respond with ONLY the category name."""
+Respond with ONLY the category name (e.g., "Programming", "Social media")."""
 
         completion = client.chat.completions.create(
           model="google/gemini-2.0-flash-thinking-exp:free", # Or another suitable model

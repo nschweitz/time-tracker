@@ -2,17 +2,19 @@ import os
 from datetime import datetime, time, date, timedelta, timezone
 from PIL import Image, ImageDraw
 
-# Define colors for each category (RGB tuples)
+# Define colors and descriptions for each category
+# Format: "Category Name": ( (R, G, B), "Description for LLM" )
 CATEGORY_COLORS = {
-    "Programming": (30, 144, 255),    # DodgerBlue
-    "Social media": (255, 165, 0),     # Orange
-    "Youtube": (255, 0, 0),           # Red
-    "Productive stuff in browser": (60, 179, 113), # MediumSeaGreen
-    "Spotify": (30, 215, 96),         # Spotify Green
-    "Watching stuff": (128, 0, 128),   # Purple
-    "Reading news": (210, 105, 30),    # Chocolate
-    "Other": (169, 169, 169),         # DarkGray
-    "Unknown": (211, 211, 211),       # LightGray (for background/initial state)
+    "Programming":              ( (30, 144, 255), "Writing code, debugging, using IDEs, terminal tasks related to coding." ),
+    "Social media":             ( (255, 165, 0),  "Browsing Reddit, forums (e.g., guitar, Blind), Hacker News, etc." ),
+    "Youtube":                  ( (255, 0, 0),    "Watching videos on Youtube." ),
+    "Productive browser":       ( (60, 179, 113), "Reading technical documentation, research papers, LeetCode, Stack Overflow, work-related web apps." ),
+    "Spotify":                  ( (30, 215, 96),  "Listening to music or podcasts on Spotify." ),
+    "Watching stuff":           ( (128, 0, 128),  "Watching videos (not Youtube), movies, TV shows (e.g., Plex, Netflix)." ),
+    "Reading news":             ( (210, 105, 30), "Reading news websites or aggregators." ),
+    "Other":                    ( (169, 169, 169),"Anything that doesn't fit well into other categories (e.g., file browsing, system settings)." ),
+    # Internal category, not shown to LLM
+    "Unknown":                  ( (211, 211, 211),"Time before first data point or gaps between activities." ),
 }
 MAX_VALIDITY_SECONDS = 90
 
@@ -90,16 +92,18 @@ def generate_chart(
         print(f"  {dt.isoformat()} - {cat}")
     print("--------------------------")
 
-    # Create the image
-    image = Image.new('RGB', (chart_width, chart_height), category_colors.get("Unknown", (211, 211, 211)))
+    # Create the image - access color tuple using [0]
+    unknown_color_tuple = category_colors.get("Unknown", ((211, 211, 211), ""))[0]
+    image = Image.new('RGB', (chart_width, chart_height), unknown_color_tuple)
     draw = ImageDraw.Draw(image)
 
     # Calculate seconds per pixel
     seconds_per_pixel = total_duration_seconds / chart_width
-    unknown_color = category_colors.get("Unknown", (211, 211, 211))
+    unknown_color = category_colors.get("Unknown", ((211, 211, 211), ""))[0] # Extract color
 
     # Helper to draw a rectangle
-    def draw_segment(start_dt, end_dt, color, category_name):
+    def draw_segment(start_dt, end_dt, color_tuple, category_name): # Pass the whole tuple initially
+        color = color_tuple[0] # Extract the RGB color
         if start_dt >= end_dt:
             return # Skip zero or negative duration
 
@@ -128,7 +132,8 @@ def generate_chart(
 
         # 1. Draw "Unknown" gap before this event
         if event_dt > current_dt:
-            draw_segment(current_dt, event_dt, unknown_color, "Unknown (Gap)")
+            # Pass the full tuple for Unknown category
+            draw_segment(current_dt, event_dt, category_colors["Unknown"], "Unknown (Gap)")
             current_dt = event_dt # Move pointer to start of event
 
         # 2. Determine the end of this event's colored block
@@ -137,8 +142,9 @@ def generate_chart(
         colored_block_end_dt = min(max_valid_end_dt, next_event_start_dt, chart_end_dt)
 
         # 3. Draw the actual category block
-        color = category_colors.get(category, category_colors.get("Other"))
-        draw_segment(current_dt, colored_block_end_dt, color, category)
+        # Get the tuple (color, description), fallback to Other's tuple
+        color_desc_tuple = category_colors.get(category, category_colors["Other"])
+        draw_segment(current_dt, colored_block_end_dt, color_desc_tuple, category)
 
         # 4. Update current_dt
         current_dt = colored_block_end_dt
@@ -149,7 +155,8 @@ def generate_chart(
 
     # Fill any remaining time at the end with "Unknown"
     if current_dt < chart_end_dt:
-        draw_segment(current_dt, chart_end_dt, unknown_color, "Unknown (End Gap)")
+        # Pass the full tuple for Unknown category
+        draw_segment(current_dt, chart_end_dt, category_colors["Unknown"], "Unknown (End Gap)")
 
     print("-----------------------")
 
