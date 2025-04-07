@@ -30,7 +30,7 @@ To use `scrot` or whatever X screenshotter you want instead.
 ## Producing a chart
 The program automatically generates a time chart and puts it in /tmp/time.png.
 Here's an example:
-![](https://github.com/nschweitz/time-tracker/example.png)
+![epic sreenie](https://github.com/nschweitz/time-tracker/blob/e120f8dc6223c049165ff3e7724cae6dc1ca85d9/example.png)
 
 ## Setting categories
 It's hardcoded (sorry) in chart.py:
