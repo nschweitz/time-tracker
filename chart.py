@@ -91,7 +91,7 @@ def generate_chart(
 
     # Store work segment information
     work_segments_info = []
-    
+
     # Helper to draw a rectangle
     def draw_segment(start_dt, end_dt, color_tuple, category_name):
         nonlocal total_work_seconds, debug_total_segments, debug_work_segments, debug_work_seconds_by_segment, work_segments_info
@@ -123,33 +123,81 @@ def generate_chart(
                 print(f"    [WORK] Segment #{debug_total_segments}: {start_time_str} to {end_time_str} - Added {duration_seconds:.2f}s ({segment_time_str}) to Work time. Total: {total_work_seconds:.2f}s")
 
     # --- Draw intervals ---
-    print("--- Drawing Intervals ---")
+    print("--- Drawing Intervals (with merging logic) ---")
     current_dt = chart_start_dt
-
-    for i, (event_dt, category) in enumerate(data_points):
+    i = 0
+    while i < len(data_points):
+        event_dt, category = data_points[i]
         event_dt = max(event_dt, chart_start_dt)
         event_dt = min(event_dt, chart_end_dt)
 
+        # 1. Draw Unknown Gap before the current event/block
         if event_dt > current_dt:
             draw_segment(current_dt, event_dt, category_colors["Unknown"], "Unknown (Gap)")
-            current_dt = event_dt
+            current_dt = event_dt # current_dt is now the start of the potential block
 
-        max_valid_end_dt = event_dt + timedelta(seconds=MAX_VALIDITY_SECONDS)
-        next_event_start_dt = data_points[i+1][0] if i + 1 < len(data_points) else chart_end_dt
-        colored_block_end_dt = min(max_valid_end_dt, next_event_start_dt, chart_end_dt)
+        # If current_dt reached the end due to gap filling, stop
+        if current_dt >= chart_end_dt:
+             break
 
-        color_desc_tuple = category_colors.get(category, category_colors["Other"])
-        draw_segment(current_dt, colored_block_end_dt, color_desc_tuple, category)
+        # 2. Find the end of the contiguous block of the same category
+        # start_of_block_dt = current_dt # This is the drawing start time
+        current_block_category = category
+        last_event_in_block_dt = event_dt
+        k = i # k is the index of the last event included in the current block
 
+        # Look ahead to merge
+        j = i + 1
+        while j < len(data_points):
+            next_event_dt, next_category = data_points[j]
+            next_event_dt = min(next_event_dt, chart_end_dt) # Ensure next event is within chart bounds
+
+            gap_seconds = (next_event_dt - last_event_in_block_dt).total_seconds()
+
+            if next_category == current_block_category and gap_seconds <= MAX_VALIDITY_SECONDS:
+                # Merge: Update the last event time and index for this block
+                last_event_in_block_dt = next_event_dt
+                k = j
+                j += 1 # Continue looking ahead
+            else:
+                # Stop merging (category change, gap too large, or end of chart)
+                break
+        # After the inner loop, 'k' holds the index of the last data point in the merged block
+        # 'last_event_in_block_dt' holds the timestamp of that last data point
+
+        # 3. Calculate the end time for the colored block
+        # The validity extends from the *last* point in the block
+        max_valid_end_dt = last_event_in_block_dt + timedelta(seconds=MAX_VALIDITY_SECONDS)
+        # The block must end before the *next* data point that *didn't* merge
+        next_block_start_dt = data_points[k+1][0] if k + 1 < len(data_points) else chart_end_dt
+        next_block_start_dt = min(next_block_start_dt, chart_end_dt) # Ensure next start is within bounds
+
+        colored_block_end_dt = min(max_valid_end_dt, next_block_start_dt)
+
+        # Ensure end time does not exceed chart end
+        colored_block_end_dt = min(colored_block_end_dt, chart_end_dt)
+
+        # 4. Draw the (potentially merged) segment
+        color_desc_tuple = category_colors.get(current_block_category, category_colors["Other"])
+        # The segment starts at current_dt (which was updated to event_dt if a gap was drawn)
+        draw_segment(current_dt, colored_block_end_dt, color_desc_tuple, current_block_category)
+
+        # 5. Update current_dt for the next iteration's gap calculation
         current_dt = colored_block_end_dt
 
+        # 6. Advance the main loop index past the processed block
+        i = k + 1
+
+        # Exit if we've filled the chart (redundant check, but safe)
         if current_dt >= chart_end_dt:
             break
 
+    # Draw final unknown gap if needed
     if current_dt < chart_end_dt:
         draw_segment(current_dt, chart_end_dt, category_colors["Unknown"], "Unknown (End Gap)")
 
     print("-----------------------")
+
 
     # --- Draw Hour Ticks ---
     print("--- Drawing Hour Ticks ---")
@@ -191,25 +239,25 @@ def generate_chart(
     work_hours = total_work_minutes // 60
     work_minutes = total_work_minutes % 60
     work_time_str = f"Work: {work_hours}h {work_minutes}m"
-    
+
     # Debug summary of work time calculation
     print(f"\n=== WORK TIME CALCULATION SUMMARY ===")
     print(f"  Total segments drawn: {debug_total_segments}")
     print(f"  Work segments: {debug_work_segments}")
     print(f"  Total work seconds: {total_work_seconds:.2f}s ({total_work_minutes} minutes)")
     print(f"  Formatted work time: {work_time_str}")
-    
+
     if debug_work_segments > 0:
         print(f"\n  Work segments breakdown:")
         for i, (start_dt, end_dt, seconds) in enumerate(work_segments_info):
             minutes = int(seconds // 60)
             secs = int(seconds % 60)
-            
+
             start_time_str = start_dt.strftime("%H:%M:%S")
             end_time_str = end_dt.strftime("%H:%M:%S")
-            
+
             print(f"    Segment #{i+1}: {start_time_str} to {end_time_str} - {minutes}m {secs}s ({seconds:.2f}s)")
-    
+
     print(f"=====================================\n")
 
     # Load a font
