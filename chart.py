@@ -89,9 +89,12 @@ def generate_chart(
     # Initialize total work time counter
     total_work_seconds = 0
 
+    # Store work segment information
+    work_segments_info = []
+    
     # Helper to draw a rectangle
     def draw_segment(start_dt, end_dt, color_tuple, category_name):
-        nonlocal total_work_seconds, debug_total_segments, debug_work_segments, debug_work_seconds_by_segment
+        nonlocal total_work_seconds, debug_total_segments, debug_work_segments, debug_work_seconds_by_segment, work_segments_info
         color = color_tuple[0]
         duration_seconds = (end_dt - start_dt).total_seconds()
 
@@ -113,6 +116,8 @@ def generate_chart(
                 debug_work_segments += 1
                 total_work_seconds += duration_seconds
                 debug_work_seconds_by_segment.append(duration_seconds)
+                # Store work segment info for later display
+                work_segments_info.append((start_dt, end_dt, duration_seconds))
                 start_time_str = start_dt.strftime("%H:%M:%S")
                 end_time_str = end_dt.strftime("%H:%M:%S")
                 print(f"    [WORK] Segment #{debug_total_segments}: {start_time_str} to {end_time_str} - Added {duration_seconds:.2f}s ({segment_time_str}) to Work time. Total: {total_work_seconds:.2f}s")
@@ -196,24 +201,22 @@ def generate_chart(
     
     if debug_work_segments > 0:
         print(f"\n  Work segments breakdown:")
-        work_segment_index = 0
-        for i in range(debug_total_segments):
-            if i < len(data_points):
-                dt, category = data_points[i]
-                if category == "Work":
-                    work_segment_index += 1
-                    seconds = debug_work_seconds_by_segment[work_segment_index-1]
-                    minutes = int(seconds // 60)
-                    secs = int(seconds % 60)
-                    
-                    # Calculate end time based on start time and duration
-                    start_dt = dt
-                    end_dt = start_dt + timedelta(seconds=seconds)
-                    
-                    start_time_str = start_dt.strftime("%H:%M:%S")
-                    end_time_str = end_dt.strftime("%H:%M:%S")
-                    
-                    print(f"    Segment #{work_segment_index}: {start_time_str} to {end_time_str} - {minutes}m {secs}s ({seconds:.2f}s)")
+        # Store start and end times for each work segment during drawing
+        work_segments_info = []
+        
+        # Modify draw_segment to capture work segment info
+        def capture_work_segment_info(start_dt, end_dt, duration_seconds):
+            work_segments_info.append((start_dt, end_dt, duration_seconds))
+        
+        # Attach the capture function to draw_segment
+        draw_segment.capture_info = capture_work_segment_info
+        
+        # Print all work segments from the collected data
+        for i, (seconds) in enumerate(debug_work_seconds_by_segment):
+            minutes = int(seconds // 60)
+            secs = int(seconds % 60)
+            
+            print(f"    Segment #{i+1}: {minutes}m {secs}s ({seconds:.2f}s)")
     
     print(f"=====================================\n")
 
