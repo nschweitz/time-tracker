@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, time, date, timedelta, timezone
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont # Import ImageFont
 
 # Define colors and descriptions for each category
 # Format: "Category Name": ( (R, G, B), "Description for LLM" )
@@ -101,10 +101,16 @@ def generate_chart(
     seconds_per_pixel = total_duration_seconds / chart_width
     unknown_color = category_colors.get("Unknown", ((211, 211, 211), ""))[0] # Extract color
 
+    # Initialize total work time counter
+    total_work_seconds = 0
+
     # Helper to draw a rectangle
     def draw_segment(start_dt, end_dt, color_tuple, category_name): # Pass the whole tuple initially
+        nonlocal total_work_seconds # Allow modification of the outer scope variable
         color = color_tuple[0] # Extract the RGB color
-        if start_dt >= end_dt:
+        duration_seconds = (end_dt - start_dt).total_seconds()
+
+        if duration_seconds <= 0:
             return # Skip zero or negative duration
 
         start_pixel = int((start_dt - chart_start_dt).total_seconds() / seconds_per_pixel)
@@ -117,6 +123,10 @@ def generate_chart(
         if end_pixel > start_pixel:
             print(f"  Drawing segment: Start={start_dt.isoformat()}, End={end_dt.isoformat()}, Category={category_name}, Pixels=[{start_pixel}, {end_pixel}]")
             draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
+            # Add to work time if category is "Work"
+            if category_name == "Work":
+                total_work_seconds += duration_seconds
+                print(f"    Added {duration_seconds:.2f}s to Work time. Total: {total_work_seconds:.2f}s")
         # else:
         #     print(f"  Skipping zero-width segment: Start={start_dt.isoformat()}, End={end_dt.isoformat()}, Category={category_name}, Pixels=[{start_pixel}, {end_pixel}]")
 
@@ -144,6 +154,7 @@ def generate_chart(
         # 3. Draw the actual category block
         # Get the tuple (color, description), fallback to Other's tuple
         color_desc_tuple = category_colors.get(category, category_colors["Other"])
+        # Pass current_dt and colored_block_end_dt to draw_segment
         draw_segment(current_dt, colored_block_end_dt, color_desc_tuple, category)
 
         # 4. Update current_dt
@@ -178,11 +189,7 @@ def generate_chart(
             # Determine tick width
             if hour == 9 or hour == 17: # 9 AM or 5 PM
                 tick_width = 3
-                # Adjust x for wider lines to center them (optional, but looks better)
-                # For a 3px line, draw from x-1 to x+1. draw.line handles width.
-                # We might need to draw a rectangle for >1px width if draw.line width param isn't reliable
                 print(f"  Drawing wide tick at {hour}:00 (x={tick_x})")
-                # Use draw.line with width parameter
                 draw.line([(tick_x, 0), (tick_x, chart_height)], fill=tick_color, width=tick_width)
             else:
                 tick_width = 1
@@ -200,6 +207,57 @@ def generate_chart(
         draw.line([(0, bottom_y), (chart_width -1, bottom_y)], fill=pause_color, width=1)
         print(f"  Drew yellow line at y={bottom_y}")
         print("-----------------------------")
+
+    # --- Draw Total Work Time ---
+    print("--- Drawing Total Work Time ---")
+    try:
+        # Calculate hours and minutes
+        total_work_minutes = int(total_work_seconds // 60)
+        work_hours = total_work_minutes // 60
+        work_minutes = total_work_minutes % 60
+        work_time_str = f"Work: {work_hours}h {work_minutes}m"
+        print(f"  Formatted work time: {work_time_str}")
+
+        # Load a font (try default, fallback to PIL default)
+        try:
+            # Larger default font size if possible
+            font = ImageFont.load_default(size=18) # Adjust size as needed
+        except AttributeError: # Older PIL might not support size
+             font = ImageFont.load_default()
+        except OSError:
+            print("Warning: Default font not found. Using PIL's internal default.")
+            font = ImageFont.load_default()
+
+
+        # Text properties
+        text_color = (255, 255, 255) # White
+        margin = 5 # Pixels from edge
+
+        # Calculate text size and position
+        # Use textbbox for more accurate size calculation
+        try:
+            bbox = draw.textbbox((0, 0), work_time_str, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1] # Use height for vertical positioning
+        except AttributeError: # Older PIL might use textsize
+             text_width, text_height = draw.textsize(work_time_str, font=font)
+
+
+        # Position at top right
+        text_x = chart_width - text_width - margin
+        text_y = margin # Position near the top
+
+        # Ensure text doesn't go off the top if chart height is small
+        if text_y + text_height > chart_height:
+            text_y = max(0, chart_height - text_height -1) # Adjust if too tall
+
+        # Draw the text
+        draw.text((text_x, text_y), work_time_str, fill=text_color, font=font)
+        print(f"  Drew text '{work_time_str}' at ({text_x}, {text_y})")
+
+    except Exception as e:
+        print(f"Error drawing work time text: {e}")
+    print("-----------------------------")
 
 
     # Save the image
@@ -222,6 +280,23 @@ if __name__ == '__main__':
     # Ensure data directory exists for testing
     os.makedirs(data_dir, exist_ok=True)
     # You might want to create dummy data files in 'data/' for testing
+    # Example: Create a dummy file representing 10 minutes of work
+    try:
+        dummy_time = datetime.now().replace(hour=10, minute=0, second=0)
+        dummy_filename = os.path.join(data_dir, f"{dummy_time.strftime('%Y%m%d_%H%M%S')}.txt")
+        with open(dummy_filename, 'w') as f:
+            f.write("Work\nDummy description")
+        print(f"Created dummy data file: {dummy_filename}")
+        # Add another one 10 minutes later
+        dummy_time_2 = dummy_time + timedelta(minutes=10)
+        dummy_filename_2 = os.path.join(data_dir, f"{dummy_time_2.strftime('%Y%m%d_%H%M%S')}.txt")
+        with open(dummy_filename_2, 'w') as f:
+            f.write("Entertainment\nDummy description 2")
+        print(f"Created dummy data file: {dummy_filename_2}")
+
+    except Exception as e:
+        print(f"Could not create dummy data for testing: {e}")
+
 
     # Example usage needs to pass the is_active flag now
     generate_chart(data_dir, output_file, chart_w, chart_h, CATEGORY_COLORS, today, is_active=True) # Example: assume active
