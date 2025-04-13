@@ -53,6 +53,11 @@ def generate_chart(
     is_active: bool # Add parameter to indicate if analysis is active
 ):
     """Generates the timeline chart image for the target date."""
+    # Debug counters for work time calculation
+    debug_total_segments = 0
+    debug_work_segments = 0
+    debug_work_seconds_by_segment = []
+    """Generates the timeline chart image for the target date."""
     print(f"Generating chart for {target_date.isoformat()} (Active: {is_active})...")
 
     # Define the time range for the chart (7 AM to midnight)
@@ -86,7 +91,7 @@ def generate_chart(
 
     # Helper to draw a rectangle
     def draw_segment(start_dt, end_dt, color_tuple, category_name):
-        nonlocal total_work_seconds
+        nonlocal total_work_seconds, debug_total_segments, debug_work_segments, debug_work_seconds_by_segment
         color = color_tuple[0]
         duration_seconds = (end_dt - start_dt).total_seconds()
 
@@ -100,11 +105,15 @@ def generate_chart(
         end_pixel = min(chart_width, end_pixel)
 
         if end_pixel > start_pixel:
-            print(f"  Drawing segment: Start={start_dt.isoformat()}, End={end_dt.isoformat()}, Category={category_name}, Pixels=[{start_pixel}, {end_pixel}]")
+            debug_total_segments += 1
+            segment_time_str = f"{int(duration_seconds // 60)}m {int(duration_seconds % 60)}s"
+            print(f"  Drawing segment #{debug_total_segments}: Start={start_dt.isoformat()}, End={end_dt.isoformat()}, Duration={segment_time_str}, Category={category_name}, Pixels=[{start_pixel}, {end_pixel}]")
             draw.rectangle([(start_pixel, 0), (end_pixel, chart_height)], fill=color)
             if category_name == "Work":
+                debug_work_segments += 1
                 total_work_seconds += duration_seconds
-                print(f"    Added {duration_seconds:.2f}s to Work time. Total: {total_work_seconds:.2f}s")
+                debug_work_seconds_by_segment.append(duration_seconds)
+                print(f"    [WORK] Segment #{debug_total_segments}: Added {duration_seconds:.2f}s ({segment_time_str}) to Work time. Total: {total_work_seconds:.2f}s")
 
     # --- Draw intervals ---
     print("--- Drawing Intervals ---")
@@ -175,7 +184,22 @@ def generate_chart(
     work_hours = total_work_minutes // 60
     work_minutes = total_work_minutes % 60
     work_time_str = f"Work: {work_hours}h {work_minutes}m"
+    
+    # Debug summary of work time calculation
+    print(f"\n=== WORK TIME CALCULATION SUMMARY ===")
+    print(f"  Total segments drawn: {debug_total_segments}")
+    print(f"  Work segments: {debug_work_segments}")
+    print(f"  Total work seconds: {total_work_seconds:.2f}s ({total_work_minutes} minutes)")
     print(f"  Formatted work time: {work_time_str}")
+    
+    if debug_work_segments > 0:
+        print(f"\n  Work segments breakdown:")
+        for i, seconds in enumerate(debug_work_seconds_by_segment):
+            minutes = int(seconds // 60)
+            secs = int(seconds % 60)
+            print(f"    Segment #{i+1}: {minutes}m {secs}s ({seconds:.2f}s)")
+    
+    print(f"=====================================\n")
 
     # Load a font
     try:
