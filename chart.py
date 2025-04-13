@@ -113,7 +113,9 @@ def generate_chart(
                 debug_work_segments += 1
                 total_work_seconds += duration_seconds
                 debug_work_seconds_by_segment.append(duration_seconds)
-                print(f"    [WORK] Segment #{debug_total_segments}: Added {duration_seconds:.2f}s ({segment_time_str}) to Work time. Total: {total_work_seconds:.2f}s")
+                start_time_str = start_dt.strftime("%H:%M:%S")
+                end_time_str = end_dt.strftime("%H:%M:%S")
+                print(f"    [WORK] Segment #{debug_total_segments}: {start_time_str} to {end_time_str} - Added {duration_seconds:.2f}s ({segment_time_str}) to Work time. Total: {total_work_seconds:.2f}s")
 
     # --- Draw intervals ---
     print("--- Drawing Intervals ---")
@@ -194,10 +196,24 @@ def generate_chart(
     
     if debug_work_segments > 0:
         print(f"\n  Work segments breakdown:")
-        for i, seconds in enumerate(debug_work_seconds_by_segment):
-            minutes = int(seconds // 60)
-            secs = int(seconds % 60)
-            print(f"    Segment #{i+1}: {minutes}m {secs}s ({seconds:.2f}s)")
+        work_segment_index = 0
+        for i in range(debug_total_segments):
+            if i < len(data_points):
+                dt, category = data_points[i]
+                if category == "Work":
+                    work_segment_index += 1
+                    seconds = debug_work_seconds_by_segment[work_segment_index-1]
+                    minutes = int(seconds // 60)
+                    secs = int(seconds % 60)
+                    
+                    # Calculate end time based on start time and duration
+                    start_dt = dt
+                    end_dt = start_dt + timedelta(seconds=seconds)
+                    
+                    start_time_str = start_dt.strftime("%H:%M:%S")
+                    end_time_str = end_dt.strftime("%H:%M:%S")
+                    
+                    print(f"    Segment #{work_segment_index}: {start_time_str} to {end_time_str} - {minutes}m {secs}s ({seconds:.2f}s)")
     
     print(f"=====================================\n")
 
