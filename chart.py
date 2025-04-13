@@ -201,22 +201,14 @@ def generate_chart(
     
     if debug_work_segments > 0:
         print(f"\n  Work segments breakdown:")
-        # Store start and end times for each work segment during drawing
-        work_segments_info = []
-        
-        # Modify draw_segment to capture work segment info
-        def capture_work_segment_info(start_dt, end_dt, duration_seconds):
-            work_segments_info.append((start_dt, end_dt, duration_seconds))
-        
-        # Attach the capture function to draw_segment
-        draw_segment.capture_info = capture_work_segment_info
-        
-        # Print all work segments from the collected data
-        for i, (seconds) in enumerate(debug_work_seconds_by_segment):
+        for i, (start_dt, end_dt, seconds) in enumerate(work_segments_info):
             minutes = int(seconds // 60)
             secs = int(seconds % 60)
             
-            print(f"    Segment #{i+1}: {minutes}m {secs}s ({seconds:.2f}s)")
+            start_time_str = start_dt.strftime("%H:%M:%S")
+            end_time_str = end_dt.strftime("%H:%M:%S")
+            
+            print(f"    Segment #{i+1}: {start_time_str} to {end_time_str} - {minutes}m {secs}s ({seconds:.2f}s)")
     
     print(f"=====================================\n")
 
