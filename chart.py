@@ -15,7 +15,7 @@ CATEGORY_COLORS = {
     # Backend failed
     "Fail":                     ( (0, 255, 0), "N/A" ),
 }
-MAX_VALIDITY_SECONDS = 70
+MAX_VALIDITY_SECONDS = 100
 
 def read_data(data_dir: str, target_date: date) -> list[tuple[datetime, str]]:
     """Reads data files for the target date and returns sorted list of (timestamp, category)."""
