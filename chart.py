@@ -187,7 +187,7 @@ def generate_chart(
     # Text properties
     text_color = (255, 255, 255)
     margin = 5
-    bottom_padding = 2 # Padding from the bottom edge
+    bottom_padding = 10 # Padding from the bottom edge
 
     # Calculate text size and position
     try:
