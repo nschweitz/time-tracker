@@ -187,6 +187,7 @@ def generate_chart(
     # Text properties
     text_color = (255, 255, 255)
     margin = 5
+    bottom_padding = 2 # Padding from the bottom edge
 
     # Calculate text size and position
     try:
@@ -196,12 +197,12 @@ def generate_chart(
     except AttributeError: # Older PIL might use textsize
          text_width, text_height = draw.textsize(work_time_str, font=font)
 
-    # Position at top right
+    # Position at bottom right
     text_x = chart_width - text_width - margin
-    text_y = margin
+    text_y = chart_height - text_height - bottom_padding # Position near the bottom
 
-    if text_y + text_height > chart_height:
-        text_y = max(0, chart_height - text_height -1)
+    # Ensure text doesn't go below the image (shouldn't happen with this calculation, but good practice)
+    text_y = max(0, text_y)
 
     # Draw the text
     draw.text((text_x, text_y), work_time_str, fill=text_color, font=font)
